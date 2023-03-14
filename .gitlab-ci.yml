@@ -1,0 +1,231 @@
+.build-template: &build-template
+  stage: build
+  #    before_script:
+  #      - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  #      - docker pull $CI_REGISTRY_IMAGE:latest || true
+  #          --cache-from $CI_REGISTRY_IMAGE:latest \
+  script:
+    # Build the Docker image
+    - |
+      docker build \
+        --rm \
+        --build-arg APP_CONFIGURATION=$BUILD_CONFIGURATION \
+        --target=${BUILD_TARGET} \
+        -t $CI_REGISTRY_IMAGE:$BUILD_TAG \
+        -f docker/Dockerfile .
+
+    # Save the Docker image as an artifact
+    - mkdir -p build/$CI_REGISTRY_IMAGE
+    - docker save $CI_REGISTRY_IMAGE:$BUILD_TAG -o build/$CI_REGISTRY_IMAGE/$BUILD_TAG.tar
+  #    after_script:
+  #      - docker image rm $CI_REGISTRY_IMAGE:latest || true
+  artifacts:
+    name: $CI_JOB_NAME-$CI_COMMIT_SHORT_SHA
+    expire_in: 1 hour
+    paths:
+      - build/$CI_REGISTRY_IMAGE
+  dependencies: []
+  retry:
+    max: 1
+    when:
+      - unknown_failure
+      - stuck_or_timeout_failure
+      - runner_system_failure
+      - job_execution_timeout
+      - archived_failure
+      - unmet_prerequisites
+      - data_integrity_failure
+
+.registry-update-template: &registry-update-template
+  stage: registry-update
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    # Load image from the build stage
+    - docker load -i build/$CI_REGISTRY_IMAGE/$IMAGE_TAG.tar
+
+    # Tag the image
+    - docker tag $CI_REGISTRY_IMAGE:$IMAGE_TAG $CI_REGISTRY_IMAGE:$IMAGE_TAG-$CI_COMMIT_TAG
+
+    # Push the image
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG-$CI_COMMIT_TAG
+  after_script:
+    - docker image rm $CI_REGISTRY_IMAGE:$IMAGE_TAG
+
+.trigger-template: &trigger-template
+  stage: deploy
+  #    trigger: $TRIGGER_DEPLOY_PROJECT_NAME
+  image: curlimages/curl:7.78.0
+  script:
+    - 'curl -X POST -F token=$TRIGGER_DEPLOY_TOKEN -F ref=$TRIGGER_DEPLOY_REF_NAME -F variables[CD_ANGULAR_RELEASE]=$TRIGGER_DEPLOY_RELEASE $TRIGGER_DEPLOY_URL'
+  dependencies: []
+  allow_failure: true
+  only:
+    - tags
+
+default:
+  image: docker:20.10.11-alpine3.14
+  services:
+    - docker:20.10.11-dind-alpine3.14
+
+stages:
+  - analysis
+  - build
+  - test
+  - registry-update
+  - release
+  - deploy
+  - clean
+
+variables:
+  BUILD_TARGET: deploy
+
+.analysis-code:
+  stage: analysis
+  image: node:alpine
+  before_script:
+    # Install standardJS
+    - npm install standard --global
+  script:
+    # Execute analyze
+    - standard
+  dependencies: []
+
+analysis-dockerfile:
+  stage: analysis
+  image: hadolint/hadolint:2.6.0-alpine
+  script:
+    - hadolint docker/Dockerfile
+  dependencies: []
+  rules:
+    - changes:
+        - docker/Dockerfile
+
+.build-test:
+  <<: *build-template
+  variables:
+    BUILD_TAG: test
+    BUILD_TARGET: test
+    BUILD_CONFIGURATION: test
+
+build-dev:
+  <<: *build-template
+  stage: build
+  variables:
+    BUILD_TAG: dev
+    BUILD_CONFIGURATION: development
+  only:
+    - master
+
+build-staging:
+  <<: *build-template
+  stage: build
+  variables:
+    BUILD_TAG: staging
+    BUILD_CONFIGURATION: staging
+  only:
+    - tags
+
+build-prod:
+  <<: *build-template
+  stage: build
+  variables:
+    BUILD_TAG: prod
+    BUILD_CONFIGURATION: production
+  only:
+    - tags
+
+.test:
+  stage: test
+  before_script:
+    # Load php image from the build stage
+    - docker load -i build/$CI_REGISTRY_IMAGE/test.tar
+  script:
+    - docker run --rm $CI_REGISTRY_IMAGE:test sh -c ''
+  coverage: '/^\s*Lines:\s*\d+.\d+\%/'
+  artifacts:
+    paths:
+      - var/log/
+    expire_in: '30 mins'
+    when: on_failure
+  dependencies:
+    - build-test
+
+registry-update-latest:
+  <<: *registry-update-template
+  script:
+    # Load image from the build stage
+    - docker load -i build/$CI_REGISTRY_IMAGE/dev.tar
+
+    # Tag the image
+    - docker tag $CI_REGISTRY_IMAGE:dev $CI_REGISTRY_IMAGE:latest
+
+    # Push the image
+    - docker push $CI_REGISTRY_IMAGE:dev
+    - docker push $CI_REGISTRY_IMAGE:latest
+  after_script:
+    - docker image rm $CI_REGISTRY_IMAGE:dev
+    - docker image rm $CI_REGISTRY_IMAGE:latest
+  dependencies:
+    - build-dev
+  only:
+    - master
+
+registry-update-staging-release:
+  <<: *registry-update-template
+  variables:
+    IMAGE_TAG: staging
+  dependencies:
+    - build-staging
+  only:
+    - tags
+
+registry-update-prod-release:
+  <<: *registry-update-template
+  variables:
+    IMAGE_TAG: prod
+  dependencies:
+    - build-prod
+  only:
+    - tags
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "Running the release job."
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: 'Release $CI_COMMIT_TAG'
+    description: 'Release created using the release-cli.'
+
+trigger-latest:
+  <<: *trigger-template
+  variables:
+    TRIGGER_DEPLOY_RELEASE: latest
+  only:
+    - master
+
+.trigger-release-staging:
+  <<: *trigger-template
+  variables:
+    TRIGGER_DEPLOY_RELEASE: staging-$CI_COMMIT_TAG
+
+.trigger-release-prod:
+  <<: *trigger-template
+  variables:
+    TRIGGER_DEPLOY_RELEASE: prod-$CI_COMMIT_TAG
+
+clean:
+  stage: clean
+  script:
+    - docker container prune -f
+    - docker network prune -f
+    - docker volume prune -f
+    - docker image prune -f
+  dependencies: []
+  when: always
+  allow_failure: true

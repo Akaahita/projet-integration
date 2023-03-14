@@ -1,0 +1,85 @@
+{
+  "root": true,
+  "ignorePatterns": ["**/*"],
+  "overrides": [
+    {
+      "files": ["*.ts"],
+      "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:@angular-eslint/recommended",
+        "plugin:@angular-eslint/template/process-inline-templates",
+        "plugin:prettier/recommended"
+      ],
+      "rules": {
+        "@angular-eslint/directive-selector": [
+          "error",
+          {
+            "type": "attribute",
+            "style": "camelCase"
+          }
+        ],
+        "@angular-eslint/component-selector": [
+          "error",
+          {
+            "type": "element",
+            "style": "kebab-case"
+          }
+        ],
+        "@angular-eslint/use-lifecycle-interface": ["error"],
+        "@typescript-eslint/explicit-function-return-type": [
+          "error",
+          {
+            "allowedNames": [
+              "ngOnInit",
+              "ngOnDestroy",
+              "ngAfterViewInit",
+              "ngDoCheck",
+              "ngAfterContentInit",
+              "ngAfterContentChecked",
+              "ngAfterViewInit",
+              "ngAfterViewChecked",
+              "initListener"
+            ],
+            "allowExpressions": true,
+            "allowHigherOrderFunctions": true
+          }
+        ],
+        "@typescript-eslint/no-explicit-any": [
+          "error",
+          { "ignoreRestArgs": true }
+        ],
+        "@typescript-eslint/consistent-type-definitions": ["warn", "type"],
+        "@typescript-eslint/naming-convention": ["error"],
+        "@typescript-eslint/no-unnecessary-condition": ["error"],
+        "@typescript-eslint/prefer-for-of": ["warn"],
+        "@typescript-eslint/no-unused-vars": "off",
+        "unused-imports/no-unused-imports": "error",
+        "unused-imports/no-unused-vars": ["warn"],
+        "space-before-blocks": "off",
+        "@typescript-eslint/space-before-blocks": "error",
+        "lines-between-class-members": "off",
+        "@typescript-eslint/lines-between-class-members": [
+          "warn",
+          "always",
+          {
+            "exceptAfterOverload": true,
+            "exceptAfterSingleLine": true
+          }
+        ]
+      },
+      "parserOptions": {
+        "project": ["./tsconfig.json"]
+      }
+    },
+    {
+      "files": ["*.html"],
+      "extends": [
+        "plugin:@angular-eslint/template/recommended",
+        "plugin:prettier/recommended"
+      ],
+      "rules": {}
+    }
+  ],
+  "plugins": ["@nrwl/nx", "unused-imports"]
+}

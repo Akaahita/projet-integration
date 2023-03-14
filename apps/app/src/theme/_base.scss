@@ -1,0 +1,11 @@
+@import './base/variables';
+@import './base/mixins';
+
+html,
+body {
+  background-color: var(--background-base);
+
+  * {
+    @apply font-sans;
+  }
+}

@@ -1,0 +1,20 @@
+@mixin ellipsis($values) {
+  @each $value in $values {
+    .ellipse-#{$value} {
+      width: #{$value}rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+@mixin break-word($values) {
+  @each $value in $values {
+    .break-word-#{$value} {
+      width: #{$value}rem;
+      max-width: #{$value}rem;
+      word-wrap: break-word;
+    }
+  }
+}

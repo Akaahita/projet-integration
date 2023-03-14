@@ -1,0 +1,51 @@
+{
+  "name": "app-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/app-e2e/src",
+  "projectType": "application",
+  "targets": {
+    "e2e": {
+      "executor": "@nrwl/cypress:cypress",
+      "options": {
+        "devServerTarget": "app:serve",
+        "watch": true,
+        "headless": false,
+        "cypressConfig": "apps/app-e2e/cypress.config.ts"
+      },
+      "configurations": {
+        "production": {
+          "devServerTarget": "app:serve:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/app-e2e/**/*.{js,ts}"]
+      }
+    },
+    "cypress-run": {
+      "executor": "@nrwl/cypress:cypress",
+      "options": {
+        "devServerTarget": "app:serve",
+        "cypressConfig": "apps/app-e2e/cypress.config.ts"
+      },
+      "configurations": {
+        "production": {
+          "devServerTarget": "app:serve:production"
+        }
+      }
+    },
+    "cypress-open": {
+      "executor": "@nrwl/cypress:cypress",
+      "options": {
+        "watch": true,
+        "headless": false,
+        "cypressConfig": "apps/app-e2e/cypress.config.ts"
+      }
+    }
+  },
+  "tags": [],
+  "implicitDependencies": ["app"]
+}

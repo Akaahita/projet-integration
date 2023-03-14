@@ -1,0 +1,38 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist/out-tsc",
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitReturns": true,
+    "allowUnreachableCode": false,
+    "noFallthroughCasesInSwitch": true,
+    "pretty": true,
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "es2020",
+    "lib": ["es2018", "dom"],
+    "useDefineForClassFields": false,
+    "rootDir": ".",
+    "paths": {
+      "~environments/*": ["apps/app/src/environments/*"],
+      "~shared/*": ["apps/app/src/app/~shared/*"],
+      "~store/*": ["apps/app/src/app/~store/*"],
+      "~utils": ["apps/app/src/app/~shared/utils/*"]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "exclude": ["node_modules", "tmp"]
+}

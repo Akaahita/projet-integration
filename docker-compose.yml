@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  angular:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile
+      target: dev
+    command:
+      - 'ng'
+      - 'serve'
+    ports:
+      - ${ANGULAR_PUBLISHED_PORT:-3000}:80
+    restart: always
+    volumes:
+      - ./:/app:rw
